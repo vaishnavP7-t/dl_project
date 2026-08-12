@@ -1,0 +1,31 @@
+# Large training/dataset files — do NOT push to GitHub
+datset_Big/
+dream_1_cache.csv
+dream_therapy_cache.csv
+explainability_plots/
+explainability_plots_v7/
+explainability_plots_v7cpu/
+
+# Keep ONLY the model files the app needs
+# best_model_dream.pkl   ← keep this
+# best_model_v6ha.pkl    ← keep this
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# VS Code
+.vscode/
+
+# PDF / LaTeX build files
+*.aux
+*.log
+*.out
+*.synctex.gz
+
+# Large training scripts (optional — comment out if you want to keep them)
+# ml_dream_v7_final.py
+# ml_dream_v8_final.py
+# ml_dream_v9_hidden_lr_mlp.py

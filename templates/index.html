@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AutiSense — DREAM 2020 Severity Prediction</title>
+  <meta name="description" content="Academic demonstration of DREAM 2020 ML pipeline for autism severity prediction."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#06090f;--bg2:#0d1423;--card:rgba(255,255,255,0.04);
+      --border:rgba(255,255,255,0.08);--teal:#06b6d4;--purple:#818cf8;
+      --green:#10b981;--amber:#f59e0b;--red:#f43f5e;--orange:#f97316;
+      --text:#f1f5f9;--muted:#94a3b8;--dim:#475569;
+      --mono:'JetBrains Mono',monospace;
+    }
+    html{scroll-behavior:smooth}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+    /* BG */
+    .bg-scene{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+    .orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:0.12;animation:drift 22s ease-in-out infinite alternate}
+    .o1{width:700px;height:700px;background:#0e7490;top:-250px;left:-200px}
+    .o2{width:550px;height:550px;background:#4338ca;top:40%;right:-250px;animation-delay:-8s}
+    .o3{width:450px;height:450px;background:#0d9488;bottom:-100px;left:30%;animation-delay:-16s}
+    @keyframes drift{to{transform:translate(35px,28px) scale(1.07)}}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:16px 48px;background:rgba(6,9,15,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+    .logo{display:flex;align-items:center;gap:10px;font-size:1.1rem;font-weight:800;text-decoration:none;color:var(--text)}
+    .logo-icon{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--teal),var(--purple));display:flex;align-items:center;justify-content:center;font-size:1rem}
+    .nav-right{display:flex;align-items:center;gap:16px}
+    .nav-tag{font-size:0.7rem;font-weight:600;color:var(--teal);background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.2);padding:4px 12px;border-radius:20px}
+    .nav-model{font-size:0.7rem;color:var(--dim);font-family:var(--mono)}
+
+    /* HERO */
+    .hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:100px 24px 60px}
+    .chip{display:inline-flex;align-items:center;gap:8px;margin-bottom:28px;font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--teal);background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);padding:6px 16px;border-radius:20px}
+    .chip-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s ease infinite}
+    @keyframes pulse{50%{opacity:0.3;transform:scale(0.8)}}
+    .hero h1{font-size:clamp(2.2rem,5.5vw,4rem);font-weight:900;line-height:1.1;margin-bottom:18px;background:linear-gradient(135deg,#f1f5f9 0%,var(--teal) 50%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero-sub{max-width:600px;font-size:1rem;color:var(--muted);line-height:1.75;margin-bottom:40px}
+
+    /* Stats row */
+    .stats{display:flex;gap:16px;margin-bottom:40px;flex-wrap:wrap;justify-content:center}
+    .stat{padding:16px 24px;background:var(--card);border:1px solid var(--border);border-radius:14px;backdrop-filter:blur(12px);text-align:center;min-width:110px}
+    .stat-v{font-size:1.6rem;font-weight:800;background:linear-gradient(135deg,var(--teal),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .stat-l{font-size:0.7rem;color:var(--muted);margin-top:3px}
+
+    /* CTA */
+    .cta{display:inline-flex;align-items:center;gap:10px;padding:14px 32px;border-radius:12px;border:none;cursor:pointer;font-size:0.95rem;font-weight:700;font-family:'Inter',sans-serif;background:linear-gradient(135deg,var(--teal),#0284c7);color:#fff;transition:all 0.3s;box-shadow:0 0 26px rgba(6,182,212,0.35);text-decoration:none}
+    .cta:hover{transform:translateY(-2px);box-shadow:0 0 42px rgba(6,182,212,0.5)}
+
+    /* HOW IT WORKS accordion */
+    .how-section{position:relative;z-index:1;padding:60px 24px}
+    .how-inner{max-width:900px;margin:0 auto}
+    .how-title{font-size:1.4rem;font-weight:700;text-align:center;margin-bottom:8px}
+    .how-sub{text-align:center;color:var(--muted);font-size:0.88rem;margin-bottom:36px}
+    .pipeline{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;justify-content:center}
+    .pipe-step{flex:1;min-width:160px;max-width:200px;background:rgba(13,20,36,0.8);border:1px solid var(--border);border-radius:16px;padding:20px 16px;text-align:center;position:relative;margin:4px}
+    .pipe-step:not(:last-child)::after{content:'→';position:absolute;right:-16px;top:50%;transform:translateY(-50%);color:var(--teal);font-size:1.2rem;font-weight:700;z-index:2}
+    .pipe-icon{font-size:1.6rem;margin-bottom:10px}
+    .pipe-name{font-size:0.78rem;font-weight:700;color:var(--text);margin-bottom:5px}
+    .pipe-desc{font-size:0.7rem;color:var(--muted);line-height:1.5}
+    .pipe-tag{display:inline-block;font-size:0.65rem;font-family:var(--mono);background:rgba(6,182,212,0.1);color:var(--teal);padding:2px 8px;border-radius:4px;margin-top:8px}
+
+    .feature-note{margin-top:32px;background:rgba(13,20,36,0.7);border:1px solid var(--border);border-radius:16px;padding:24px 28px}
+    .fn-title{font-size:0.85rem;font-weight:700;margin-bottom:14px;color:var(--text)}
+    .fn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+    .fn-item{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:14px}
+    .fn-item-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+    .fn-badge{font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:4px}
+    .fn-provided{background:rgba(16,185,129,0.15);color:var(--green)}
+    .fn-imputed{background:rgba(245,158,11,0.12);color:var(--amber)}
+    .fn-derived{background:rgba(129,140,248,0.12);color:var(--purple)}
+    .fn-item-name{font-size:0.78rem;font-weight:600;font-family:var(--mono);color:var(--text)}
+    .fn-item-desc{font-size:0.72rem;color:var(--muted);line-height:1.5}
+
+    /* FORM */
+    #assessment{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:70px 24px}
+    .form-card{width:100%;max-width:740px;background:rgba(10,16,28,0.9);border:1px solid var(--border);border-radius:24px;backdrop-filter:blur(24px);box-shadow:0 30px 80px rgba(0,0,0,0.6);overflow:hidden}
+    .fc-header{padding:28px 38px 22px;border-bottom:1px solid var(--border)}
+    .fc-header h2{font-size:1.25rem;font-weight:700;margin-bottom:4px}
+    .fc-header p{font-size:0.82rem;color:var(--muted)}
+
+    /* Progress */
+    .prog{padding:16px 38px 0}
+    .prog-info{display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);margin-bottom:6px}
+    .prog-track{height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden}
+    .prog-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--purple));border-radius:2px;transition:width 0.5s cubic-bezier(0.4,0,0.2,1)}
+
+    /* Dots */
+    .dots{display:flex;align-items:center;justify-content:space-between;padding:16px 38px}
+    .dot{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;border:2px solid var(--border);color:var(--dim);transition:all 0.4s}
+    .dot.on{border-color:var(--teal);color:var(--teal);background:rgba(6,182,212,0.1);box-shadow:0 0 12px rgba(6,182,212,0.25)}
+    .dot.done{border-color:var(--green);background:var(--green);color:#fff}
+    .dline{flex:1;height:2px;background:var(--border);margin:0 5px;transition:background 0.4s}
+    .dline.done{background:var(--green)}
+
+    /* Steps */
+    .fb{padding:6px 38px 30px}
+    .fstep{display:none;animation:sIn 0.35s ease}
+    .fstep.on{display:block}
+    @keyframes sIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+    .sh{display:flex;align-items:center;gap:12px;margin:22px 0 6px}
+    .sh-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(6,182,212,0.16),rgba(129,140,248,0.16));border:1px solid rgba(6,182,212,0.2);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+    .sh h3{font-size:1.05rem;font-weight:700}
+    .step-sub{font-size:0.82rem;color:var(--muted);line-height:1.65;margin-bottom:22px}
+
+    /* Inputs */
+    .field{margin-bottom:28px}
+    .field-label{font-size:0.78rem;font-weight:600;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .field-label code{font-size:0.73rem;font-family:var(--mono);background:rgba(6,182,212,0.1);color:var(--teal);padding:2px 7px;border-radius:4px}
+    .field-label .rng{font-size:0.7rem;color:var(--dim);font-family:var(--mono)}
+    input[type="text"],input[type="number"],select{width:100%;padding:11px 14px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:0.92rem;outline:none;transition:border-color 0.3s,box-shadow 0.3s}
+    input:focus,select:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(6,182,212,0.12)}
+    select option{background:#1a2235}
+
+    /* Gender */
+    .gbg{display:flex;gap:10px}
+    .gbtn{flex:1;padding:10px;border:2px solid var(--border);border-radius:10px;background:transparent;color:var(--muted);font-family:'Inter',sans-serif;font-size:0.83rem;font-weight:600;cursor:pointer;transition:all 0.3s;text-align:center}
+    .gbtn.sel{border-color:var(--teal);background:rgba(6,182,212,0.09);color:var(--teal)}
+
+    /* Slider block */
+    .sblock{background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:28px}
+    .sblock-top{margin-bottom:14px}
+    .sblock-q{font-size:0.88rem;font-weight:700;margin-bottom:4px}
+    .sblock-code{font-size:0.72rem;font-family:var(--mono);color:var(--teal);margin-bottom:6px}
+    .sblock-about{font-size:0.77rem;color:var(--muted);line-height:1.6}
+    .sblock-about a{color:var(--teal);cursor:pointer;text-decoration:underline}
+
+    input[type="range"]{-webkit-appearance:none;width:100%;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;cursor:pointer;outline:none;margin:8px 0}
+    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--purple));box-shadow:0 0 8px rgba(6,182,212,0.5);cursor:pointer;transition:transform 0.2s}
+    input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+    input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--teal),var(--purple));cursor:pointer}
+
+    .sv-row{display:flex;justify-content:space-between;align-items:center;margin-top:2px}
+    .sv-num{font-size:1.8rem;font-weight:900;background:linear-gradient(135deg,var(--teal),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+    .sv-lbl{font-size:0.72rem;color:var(--muted);margin-top:2px}
+    .sv-tag{font-size:0.72rem;font-weight:700;padding:3px 11px;border-radius:20px}
+    .t0{background:rgba(16,185,129,0.14);color:var(--green)}
+    .t1{background:rgba(245,158,11,0.13);color:var(--amber)}
+    .t2{background:rgba(249,115,22,0.13);color:var(--orange)}
+    .t3{background:rgba(244,63,94,0.13);color:var(--red)}
+
+    /* Level guide */
+    .level-guide{margin-top:14px;border-top:1px solid var(--border);padding-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+    .lg-item{background:rgba(255,255,255,0.02);border-radius:8px;padding:8px 10px}
+    .lg-range{font-size:0.65rem;font-family:var(--mono);font-weight:700;margin-bottom:3px}
+    .lg-desc{font-size:0.7rem;color:var(--muted);line-height:1.4}
+    .c-green{color:var(--green)}.c-amber{color:var(--amber)}.c-orange{color:var(--orange)}.c-red{color:var(--red)}
+
+    /* Review table */
+    .review-box{background:rgba(6,182,212,0.04);border:1px solid rgba(6,182,212,0.15);border-radius:14px;padding:20px}
+    .rv-title{font-size:0.8rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .rv-table{width:100%;border-collapse:collapse;font-size:0.8rem}
+    .rv-table tr{border-bottom:1px solid rgba(255,255,255,0.05)}
+    .rv-table tr:last-child{border-bottom:none}
+    .rv-table td{padding:7px 0}
+    .rv-table .rv-key{font-family:var(--mono);color:var(--muted);font-size:0.75rem}
+    .rv-table .rv-val{color:var(--teal);text-align:right;font-weight:600;font-family:var(--mono)}
+    .rv-table .rv-note{color:var(--dim);text-align:right;font-size:0.68rem}
+    .rv-total-row td{color:var(--text);font-weight:700;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1)}
+    .rv-warn{margin-top:12px;font-size:0.75rem;color:var(--amber);background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.18);border-radius:8px;padding:10px 14px;line-height:1.5}
+
+    /* Nav buttons */
+    .fnav{display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:20px;border-top:1px solid var(--border)}
+    .bbk,.bnx,.bsb{display:inline-flex;align-items:center;gap:7px;padding:11px 24px;border-radius:10px;border:none;font-family:'Inter',sans-serif;font-size:0.87rem;font-weight:700;cursor:pointer;transition:all 0.3s}
+    .bbk{background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid var(--border)}
+    .bbk:hover{background:rgba(255,255,255,0.09);color:var(--text)}
+    .bnx{background:linear-gradient(135deg,var(--teal),#0284c7);color:#fff;box-shadow:0 0 16px rgba(6,182,212,0.25)}
+    .bnx:hover,.bsb:hover{transform:translateY(-1px)}
+    .bsb{background:linear-gradient(135deg,var(--green),#059669);color:#fff;box-shadow:0 0 16px rgba(16,185,129,0.25)}
+    .hidden{visibility:hidden}
+    .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* RESULT */
+    #result{position:relative;z-index:1;display:none;min-height:100vh;padding:80px 24px;flex-direction:column;align-items:center;justify-content:center}
+    .rcard{width:100%;max-width:800px;background:rgba(10,16,28,0.92);border:1px solid var(--border);border-radius:24px;backdrop-filter:blur(24px);box-shadow:0 30px 80px rgba(0,0,0,0.6);overflow:hidden}
+    .rhd{padding:24px 36px;background:linear-gradient(135deg,rgba(6,182,212,0.07),rgba(129,140,248,0.07));border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
+    .rhd-icon{width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,var(--teal),var(--purple));display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+    .rhd h2{font-size:1.1rem;font-weight:700}
+    .rhd p{font-size:0.78rem;color:var(--muted);margin-top:2px}
+    .rbody{padding:32px 36px}
+
+    /* Main result row */
+    .rmain{display:flex;align-items:center;gap:32px;margin-bottom:28px;flex-wrap:wrap}
+    .donut-w{position:relative;width:160px;height:160px;flex-shrink:0}
+    .donut-w svg{transform:rotate(-90deg)}
+    .dtrack{fill:none;stroke:rgba(255,255,255,0.06);stroke-width:13}
+    .dfill{fill:none;stroke-width:13;stroke-linecap:round;stroke-dasharray:283;stroke-dashoffset:283;transition:stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1),stroke 0.3s}
+    .dcenter{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .dpct{font-size:1.9rem;font-weight:900;background:linear-gradient(135deg,var(--teal),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+    .dlbl{font-size:0.62rem;color:var(--muted);margin-top:3px}
+
+    .rinfo{flex:1;min-width:200px}
+    .rsev{font-size:1.7rem;font-weight:900;margin-bottom:6px}
+    .slo{color:var(--green)}.shi{color:var(--red)}
+    .rbadge{display:inline-block;font-size:0.72rem;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:12px}
+    .rL{background:rgba(16,185,129,0.13);color:var(--green);border:1px solid rgba(16,185,129,0.25)}
+    .rM{background:rgba(245,158,11,0.13);color:var(--amber);border:1px solid rgba(245,158,11,0.25)}
+    .rH{background:rgba(244,63,94,0.13);color:var(--red);border:1px solid rgba(244,63,94,0.25)}
+
+    .prow{margin-bottom:8px}
+    .plbl{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);margin-bottom:4px}
+    .pbar{height:7px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden}
+    .pf{height:100%;border-radius:4px;transition:width 1s cubic-bezier(0.4,0,0.2,1) 0.3s}
+    .pg{background:linear-gradient(90deg,var(--green),#059669)}
+    .pr{background:linear-gradient(90deg,var(--red),#e11d48)}
+
+    /* Pipeline trace */
+    .ptrace{margin:24px 0;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
+    .ptrace-title{font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px}
+    .ptrace-steps{display:flex;flex-direction:column;gap:8px}
+    .pts{display:flex;align-items:flex-start;gap:10px;font-size:0.78rem}
+    .pts-num{width:22px;height:22px;border-radius:50%;background:rgba(6,182,212,0.15);color:var(--teal);font-size:0.68rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+    .pts-text{color:var(--muted);line-height:1.55}
+    .pts-text strong{color:var(--text)}
+    .pts-text code{font-family:var(--mono);font-size:0.72rem;background:rgba(255,255,255,0.05);color:var(--teal);padding:1px 5px;border-radius:3px}
+
+    /* Domain bars */
+    .dom-title{font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px}
+    .drow{margin-bottom:11px}
+    .dmeta{display:flex;justify-content:space-between;font-size:0.77rem;margin-bottom:4px}
+    .dmeta code{font-family:var(--mono);font-size:0.72rem;color:var(--muted)}
+    .dbar{height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden}
+    .dfill2{height:100%;border-radius:3px;transition:width 1s cubic-bezier(0.4,0,0.2,1) 0.5s}
+
+    /* Score box */
+    .sbox{background:rgba(6,182,212,0.05);border:1px solid rgba(6,182,212,0.15);border-radius:12px;padding:14px 18px;margin:20px 0;display:flex;align-items:center;gap:12px}
+    .sbox-icon{font-size:1.5rem}
+    .sbox-text{font-size:0.82rem;color:var(--muted);line-height:1.6}
+    .sbox-text strong{color:var(--text)}
+
+    /* Disclaimer */
+    .disc{background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:12px;padding:14px 18px;font-size:0.74rem;color:var(--dim);line-height:1.65;margin-bottom:24px}
+
+    /* Actions */
+    .ract{display:flex;gap:12px;flex-wrap:wrap}
+    .rbt{flex:1;min-width:130px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 20px;border-radius:10px;border:1px solid var(--border);font-family:'Inter',sans-serif;font-size:0.86rem;font-weight:700;background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer;transition:all 0.3s}
+    .rbt:hover{background:rgba(255,255,255,0.09);border-color:var(--teal);color:var(--teal)}
+
+    footer{position:relative;z-index:1;text-align:center;padding:26px 24px;border-top:1px solid var(--border);font-size:0.72rem;color:var(--dim)}
+
+    @media(max-width:600px){
+      nav{padding:14px 18px}
+      .fc-header,.fb,.rbody{padding-left:18px;padding-right:18px}
+      .dots,.prog{padding-left:18px;padding-right:18px}
+      .pipe-step:not(:last-child)::after{display:none}
+      .rmain{flex-direction:column}
+      .stats{gap:10px}
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-scene"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo"><div class="logo-icon">🧠</div>AutiSense</a>
+  <div class="nav-right">
+    <span class="nav-model">{{ model_name }}</span>
+    <span class="nav-tag">DREAM 2020 · {{ model_acc }}% LOOCV</span>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="chip"><span class="chip-dot"></span>Academic Research Tool · DREAM 2020</div>
+  <h1>Autism Severity<br/>Prediction System</h1>
+  <p class="hero-sub">
+    A machine learning pipeline trained on the <strong style="color:var(--teal)">DREAM 2020</strong> multi-modal autism dataset.
+    Enter ADOS pre-test clinical subscores — the same features used to train the model — and get an
+    instant severity classification with full pipeline transparency.
+  </p>
+  <div class="stats">
+    <div class="stat"><div class="stat-v">{{ model_acc }}%</div><div class="stat-l">LOOCV Accuracy</div></div>
+    <div class="stat"><div class="stat-v">61</div><div class="stat-l">DREAM Subjects</div></div>
+    <div class="stat"><div class="stat-v">554</div><div class="stat-l">Total Features</div></div>
+    <div class="stat"><div class="stat-v">7</div><div class="stat-l">User-Provided</div></div>
+    <div class="stat"><div class="stat-v">{{ threshold|int }}</div><div class="stat-l">ADOS Median Split</div></div>
+  </div>
+  <a href="#how" class="cta">See How It Works ↓</a>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="how-inner">
+    <div class="how-title">How the Prediction Works</div>
+    <div class="how-sub">Understanding why 7 inputs from a 554-feature model still gives meaningful predictions</div>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pipe-icon">📝</div>
+        <div class="pipe-name">User Input</div>
+        <div class="pipe-desc">7 clinical features entered via this form (ADOS subscores + demographics)</div>
+        <div class="pipe-tag">7 features</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🔧</div>
+        <div class="pipe-name">SimpleImputer</div>
+        <div class="pipe-desc">The 547 missing sensor features are filled with training-set median values</div>
+        <div class="pipe-tag">median strategy</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-icon">📏</div>
+        <div class="pipe-name">RobustScaler</div>
+        <div class="pipe-desc">All 554 features are normalized to remove scale differences</div>
+        <div class="pipe-tag">standardize</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🎯</div>
+        <div class="pipe-name">SelectKBest</div>
+        <div class="pipe-desc">Top-k most discriminative features selected by F-statistic (k tuned by Optuna)</div>
+        <div class="pipe-tag">f_classif</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🤖</div>
+        <div class="pipe-name">{{ model_name }}</div>
+        <div class="pipe-desc">Final classifier predicts severity class with probability estimates</div>
+        <div class="pipe-tag">{{ model_acc }}% LOOCV</div>
+      </div>
+    </div>
+
+    <div class="feature-note">
+      <div class="fn-title">📊 Feature Breakdown — What goes into the model?</div>
+      <div class="fn-grid">
+        <div class="fn-item">
+          <div class="fn-item-hd"><span class="fn-badge fn-provided">PROVIDED BY YOU</span></div>
+          <div class="fn-item-name">ados_pre_comm, interact, play, stereo, scq</div>
+          <div class="fn-item-desc">ADOS clinical subscores from the pre-test. These are the most predictive features because the label is derived from their sum. The SelectKBest step confirms this.</div>
+        </div>
+        <div class="fn-item">
+          <div class="fn-item-hd"><span class="fn-badge fn-provided">PROVIDED BY YOU</span></div>
+          <div class="fn-item-name">gender, age_months</div>
+          <div class="fn-item-desc">Demographic features from the DREAM participant records. Encoded as 0/1 and continuous months respectively.</div>
+        </div>
+        <div class="fn-item">
+          <div class="fn-item-hd"><span class="fn-badge fn-imputed">MEDIAN IMPUTED</span></div>
+          <div class="fn-item-name">eye_rx_mean, eye_ry_std, head_rz_entropy … (300+ features)</div>
+          <div class="fn-item-desc">Statistical features (mean, std, entropy, velocity) extracted from 600 sessions of eye-gaze time-series data recorded by the NAO robot.</div>
+        </div>
+        <div class="fn-item">
+          <div class="fn-item-hd"><span class="fn-badge fn-derived">MEDIAN IMPUTED</span></div>
+          <div class="fn-item-name">elbow_left_x_mean, hand_right_y_entropy … (200+ features)</div>
+          <div class="fn-item-desc">Statistical features extracted from skeleton joint positions tracked over the robot interaction session using motion-capture data.</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;font-size:0.78rem;color:var(--muted);background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.18);border-radius:10px;padding:12px 16px;line-height:1.65">
+        ⚠️ <strong style="color:var(--amber)">Why does it still predict accurately?</strong>
+        The label is <code style="font-family:var(--mono);font-size:0.73rem;background:rgba(255,255,255,0.06);color:var(--teal);padding:1px 5px;border-radius:3px">ados_pre_total ≥ {{ threshold|int }}</code>
+        where <code style="font-family:var(--mono);font-size:0.73rem;background:rgba(255,255,255,0.06);color:var(--teal);padding:1px 5px;border-radius:3px">total = comm + interact + play + stereo</code>.
+        So the 4 subscores you enter are components of the label itself — the model essentially reconstructs the total score from its parts.
+        This is a known characteristic of the dataset (explored in our ablation study). The Stacking Ensemble, which combines multiple models,
+        gives a more academically defensible ~98% LOOCV result.
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:32px">
+      <a href="#assessment" class="cta">Open Assessment Form →</a>
+    </div>
+  </div>
+</section>
+
+<!-- FORM -->
+<section id="assessment">
+  <div class="form-card">
+    <div class="fc-header">
+      <h2>ADOS Pre-Test Score Entry</h2>
+      <p>Enter clinical scores exactly as they appear in the DREAM 2020 dataset JSON files</p>
+    </div>
+    <div class="prog">
+      <div class="prog-info"><span id="slbl">Step 1 of 4</span><span id="spct">25%</span></div>
+      <div class="prog-track"><div class="prog-fill" id="pf" style="width:25%"></div></div>
+    </div>
+    <div class="dots">
+      <div class="dot on" id="d0">1</div><div class="dline" id="l0"></div>
+      <div class="dot" id="d1">2</div><div class="dline" id="l1"></div>
+      <div class="dot" id="d2">3</div><div class="dline" id="l2"></div>
+      <div class="dot" id="d3">4</div>
+    </div>
+
+    <div class="fb">
+
+      <!-- STEP 0: Demographics -->
+      <div class="fstep on" id="s0">
+        <div class="sh"><div class="sh-icon">👤</div><h3>Demographics</h3></div>
+        <p class="step-sub">Basic participant information matching the DREAM 2020 JSON participant fields.</p>
+        <div class="field">
+          <div class="field-label">Name (optional — display only)</div>
+          <input type="text" id="nm" placeholder="e.g., Subject A"/>
+        </div>
+        <div class="field">
+          <div class="field-label"><code>age_months</code> — Enter age in years <span class="rng">(auto × 12)</span></div>
+          <input type="number" id="ay" min="1" max="18" step="0.5" value="5"/>
+          <div style="font-size:0.72rem;color:var(--dim);margin-top:5px">Stored as <code style="font-family:var(--mono);color:var(--teal)">age_months = years × 12</code> → e.g. 5 yrs = 60 months</div>
+        </div>
+        <div class="field">
+          <div class="field-label"><code>gender</code> — Encoded: 0 = male, 1 = female</div>
+          <div class="gbg">
+            <button class="gbtn sel" data-v="male" onclick="pg(this)">♂ Male (0)</button>
+            <button class="gbtn" data-v="female" onclick="pg(this)">♀ Female (1)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 1: Comm + Interact -->
+      <div class="fstep" id="s1">
+        <div class="sh"><div class="sh-icon">💬</div><h3>Communication & Social Interaction</h3></div>
+        <p class="step-sub">Two of the four ADOS sub-domain scores. These are direct clinical measurements from the ADOS-2 assessment administered during the DREAM 2020 study.</p>
+
+        <div class="sblock">
+          <div class="sblock-top">
+            <div class="sblock-q">Communication Difficulties</div>
+            <div class="sblock-code">ados_pre_comm · DREAM path: ados.preTest.communication · Range: 0–8</div>
+            <div class="sblock-about">Measures the quality and spontaneity of verbal and non-verbal communication during the ADOS structured session with a clinician.</div>
+          </div>
+          <input type="range" id="rc" min="0" max="8" step="1" value="2" oninput="sv('c',this.value,8)"/>
+          <div class="sv-row">
+            <div><div class="sv-num" id="nv-c">2</div><div class="sv-lbl">ados_pre_comm value</div></div>
+            <span class="sv-tag" id="st-c">Mild</span>
+          </div>
+          <div class="level-guide">
+            <div class="lg-item"><div class="lg-range c-green">0–1</div><div class="lg-desc">Uses complex sentences; communicates spontaneously and appropriately</div></div>
+            <div class="lg-item"><div class="lg-range c-amber">2–3</div><div class="lg-desc">Uses phrases; some delays or unusual patterns noted by clinician</div></div>
+            <div class="lg-item"><div class="lg-range c-orange">4–5</div><div class="lg-desc">Very limited verbal output; relies on gestures or echolalia</div></div>
+            <div class="lg-item"><div class="lg-range c-red">6–8</div><div class="lg-desc">Mostly non-verbal; minimal functional communication observed</div></div>
+          </div>
+        </div>
+
+        <div class="sblock">
+          <div class="sblock-top">
+            <div class="sblock-q">Reciprocal Social Interaction</div>
+            <div class="sblock-code">ados_pre_interact · DREAM path: ados.preTest.interaction · Range: 0–14</div>
+            <div class="sblock-about">Measures quality of social engagement, eye contact, shared attention, and response to social cues during the ADOS session.</div>
+          </div>
+          <input type="range" id="ri" min="0" max="14" step="1" value="4" oninput="sv('i',this.value,14)"/>
+          <div class="sv-row">
+            <div><div class="sv-num" id="nv-i">4</div><div class="sv-lbl">ados_pre_interact value</div></div>
+            <span class="sv-tag" id="st-i">Mild</span>
+          </div>
+          <div class="level-guide">
+            <div class="lg-item"><div class="lg-range c-green">0–3</div><div class="lg-desc">Actively seeks social interaction; good eye contact and shared joy</div></div>
+            <div class="lg-item"><div class="lg-range c-amber">4–7</div><div class="lg-desc">Occasionally initiates; inconsistent eye contact; some reciprocity</div></div>
+            <div class="lg-item"><div class="lg-range c-orange">8–11</div><div class="lg-desc">Minimal interaction; does not orient to social cues reliably</div></div>
+            <div class="lg-item"><div class="lg-range c-red">12–14</div><div class="lg-desc">Very limited social awareness; rarely acknowledges the clinician</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Play + Stereo -->
+      <div class="fstep" id="s2">
+        <div class="sh"><div class="sh-icon">🔁</div><h3>Play & Stereotyped Behaviors</h3></div>
+        <p class="step-sub">Two more ADOS sub-domain scores. Together with Communication and Social Interaction, these four scores sum to the total ADOS score used to create the prediction label.</p>
+
+        <div class="sblock">
+          <div class="sblock-top">
+            <div class="sblock-q">Play, Creativity & Imagination</div>
+            <div class="sblock-code">ados_pre_play · DREAM path: ados.preTest.play · Range: 0–5</div>
+            <div class="sblock-about">Rates whether the child's play is creative, flexible, and age-appropriate or rigid, repetitive, and non-symbolic.</div>
+          </div>
+          <input type="range" id="rp" min="0" max="5" step="1" value="1" oninput="sv('p',this.value,5)"/>
+          <div class="sv-row">
+            <div><div class="sv-num" id="nv-p">1</div><div class="sv-lbl">ados_pre_play value</div></div>
+            <span class="sv-tag" id="st-p">Low</span>
+          </div>
+          <div class="level-guide">
+            <div class="lg-item"><div class="lg-range c-green">0</div><div class="lg-desc">Spontaneous imaginative play; uses toys representationally</div></div>
+            <div class="lg-item"><div class="lg-range c-amber">1–2</div><div class="lg-desc">Some pretend play but limited; may need prompting</div></div>
+            <div class="lg-item"><div class="lg-range c-orange">3–4</div><div class="lg-desc">Mostly functional/repetitive use of objects; little creativity</div></div>
+            <div class="lg-item"><div class="lg-range c-red">5</div><div class="lg-desc">Non-symbolic, sensory-focused play only; no pretend play observed</div></div>
+          </div>
+        </div>
+
+        <div class="sblock">
+          <div class="sblock-top">
+            <div class="sblock-q">Stereotyped Behaviors & Restricted Interests</div>
+            <div class="sblock-code">ados_pre_stereo · DREAM path: ados.preTest.stereotype · Range: 0–8</div>
+            <div class="sblock-about">Rates the frequency and intensity of repetitive motor behaviors, unusual sensory responses, and insistence on sameness observed during the ADOS session.</div>
+          </div>
+          <input type="range" id="rs" min="0" max="8" step="1" value="2" oninput="sv('s',this.value,8)"/>
+          <div class="sv-row">
+            <div><div class="sv-num" id="nv-s">2</div><div class="sv-lbl">ados_pre_stereo value</div></div>
+            <span class="sv-tag" id="st-s">Mild</span>
+          </div>
+          <div class="level-guide">
+            <div class="lg-item"><div class="lg-range c-green">0–1</div><div class="lg-desc">No unusual repetitive behaviors or restricted interests observed</div></div>
+            <div class="lg-item"><div class="lg-range c-amber">2–3</div><div class="lg-desc">Mild, occasional stereotyped movements or strong preferences</div></div>
+            <div class="lg-item"><div class="lg-range c-orange">4–5</div><div class="lg-desc">Moderate, noticeable patterns that require redirection</div></div>
+            <div class="lg-item"><div class="lg-range c-red">6–8</div><div class="lg-desc">Frequent/severe repetitive behaviors disrupting the session</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: SCQ + Review -->
+      <div class="fstep" id="s3">
+        <div class="sh"><div class="sh-icon">📋</div><h3>SCQ Score & Pre-Submission Review</h3></div>
+        <p class="step-sub">Final ADOS score, then verify all values before sending to the model.</p>
+
+        <div class="sblock">
+          <div class="sblock-top">
+            <div class="sblock-q">Social Communication Questionnaire (SCQ) Total</div>
+            <div class="sblock-code">ados_pre_scq · DREAM path: ados.preTest.socialCommunicationQuestionnaire · Range: 0–39</div>
+            <div class="sblock-about">A parent/carer-completed questionnaire of 40 yes/no items about lifetime social communication behaviors. A standard clinical screening tool complementing the direct ADOS assessment.</div>
+          </div>
+          <input type="range" id="rq" min="0" max="39" step="1" value="8" oninput="sv('q',this.value,39)"/>
+          <div class="sv-row">
+            <div><div class="sv-num" id="nv-q">8</div><div class="sv-lbl">ados_pre_scq value</div></div>
+            <span class="sv-tag" id="st-q">Low</span>
+          </div>
+          <div class="level-guide">
+            <div class="lg-item"><div class="lg-range c-green">0–11</div><div class="lg-desc">Below clinical cutoff — unlikely ASD indicators by SCQ criteria</div></div>
+            <div class="lg-item"><div class="lg-range c-amber">12–15</div><div class="lg-desc">Borderline — warrants further clinical evaluation</div></div>
+            <div class="lg-item"><div class="lg-range c-orange">16–24</div><div class="lg-desc">Above cutoff — consistent with possible ASD indicators</div></div>
+            <div class="lg-item"><div class="lg-range c-red">25–39</div><div class="lg-desc">Well above cutoff — strong SCQ indicators; clinical follow-up recommended</div></div>
+          </div>
+        </div>
+
+        <!-- Review table -->
+        <div class="review-box">
+          <div class="rv-title">🔍 Values being passed to the model pipeline:</div>
+          <table class="rv-table">
+            <tr><td class="rv-key">gender</td>             <td class="rv-val" id="rv-g">—</td></tr>
+            <tr><td class="rv-key">age_months</td>         <td class="rv-val" id="rv-a">—</td></tr>
+            <tr><td class="rv-key">ados_pre_comm</td>      <td class="rv-val" id="rv-c">—</td></tr>
+            <tr><td class="rv-key">ados_pre_interact</td>  <td class="rv-val" id="rv-i">—</td></tr>
+            <tr><td class="rv-key">ados_pre_play</td>      <td class="rv-val" id="rv-p">—</td></tr>
+            <tr><td class="rv-key">ados_pre_stereo</td>    <td class="rv-val" id="rv-s">—</td></tr>
+            <tr><td class="rv-key">ados_pre_scq</td>       <td class="rv-val" id="rv-q">—</td></tr>
+            <tr><td class="rv-key">Remaining 547 features</td><td class="rv-note">→ median imputed by SimpleImputer</td></tr>
+            <tr class="rv-total-row">
+              <td class="rv-key">Estimated ados_pre_total (comm+interact+play+stereo)</td>
+              <td class="rv-val" id="rv-tot" style="color:var(--amber)">—</td>
+            </tr>
+          </table>
+          <div class="rv-warn" id="rv-warn"></div>
+        </div>
+      </div>
+
+      <!-- Nav -->
+      <div class="fnav">
+        <button class="bbk hidden" id="bb" onclick="prev()">← Back</button>
+        <button class="bnx" id="bn" onclick="next()">Continue →</button>
+        <button class="bsb" id="bs" style="display:none" onclick="submit()">
+          <span id="bsl">Run Model Prediction</span>
+          <span id="bsp" style="display:none"><div class="spinner"></div></span>
+        </button>
+      </div>
+
+    </div><!-- /fb -->
+  </div><!-- /form-card -->
+</section>
+
+<!-- RESULT -->
+<section id="result">
+  <div class="rcard">
+    <div class="rhd">
+      <div class="rhd-icon">📊</div>
+      <div><h2>Model Prediction Output</h2><p id="rsub">—</p></div>
+    </div>
+    <div class="rbody">
+
+      <div class="rmain">
+        <div class="donut-w">
+          <svg width="160" height="160" viewBox="0 0 100 100">
+            <circle class="dtrack" cx="50" cy="50" r="45"/>
+            <circle class="dfill" id="df" cx="50" cy="50" r="45" stroke="var(--teal)"/>
+          </svg>
+          <div class="dcenter"><div class="dpct" id="dpct">—</div><div class="dlbl">P(Higher Severity)</div></div>
+        </div>
+        <div class="rinfo">
+          <div class="rsev" id="rsev">—</div>
+          <div class="rbadge" id="rbdg">—</div>
+          <p style="font-size:0.82rem;color:var(--muted);line-height:1.6;margin-bottom:12px" id="rsmry">—</p>
+          <div class="prow"><div class="plbl"><span>P(Lower Severity)</span><span id="pl0">—</span></div><div class="pbar"><div class="pf pg" id="pb0" style="width:0%"></div></div></div>
+          <div class="prow"><div class="plbl"><span>P(Higher Severity)</span><span id="pl1">—</span></div><div class="pbar"><div class="pf pr" id="pb1" style="width:0%"></div></div></div>
+        </div>
+      </div>
+
+      <!-- Pipeline trace -->
+      <div class="ptrace">
+        <div class="ptrace-title">Pipeline Execution Trace</div>
+        <div class="ptrace-steps">
+          <div class="pts"><div class="pts-num">1</div><div class="pts-text" id="pt1">—</div></div>
+          <div class="pts"><div class="pts-num">2</div><div class="pts-text"><strong>SimpleImputer</strong> (median strategy): Filled <strong>547 missing sensor features</strong> with training-set median values → total input to pipeline: 554 features</div></div>
+          <div class="pts"><div class="pts-num">3</div><div class="pts-text"><strong>RobustScaler</strong>: Normalized all 554 features (resistant to outliers in sensor data)</div></div>
+          <div class="pts"><div class="pts-num">4</div><div class="pts-text"><strong>SelectKBest</strong> (f_classif, k tuned by Optuna): Selected top discriminative features — ADOS subscores rank highest because <code>ados_pre_total = comm + interact + play + stereo</code> → directly correlated with the label</div></div>
+          <div class="pts"><div class="pts-num">5</div><div class="pts-text" id="pt5">—</div></div>
+        </div>
+      </div>
+
+      <!-- Domain bars -->
+      <div class="dom-title">Input Feature Values (% of clinical max range)</div>
+      <div id="dcon"></div>
+
+      <!-- Score box -->
+      <div class="sbox"><div class="sbox-icon">📐</div><div class="sbox-text" id="sbt">—</div></div>
+
+      <div class="disc">
+        ⚠️ <strong>Research & Academic Demonstration Only:</strong> This tool uses the DREAM 2020 dataset
+        (61 children, NAO robot interaction sessions). The label is a <em>binary median split</em> on
+        ADOS pre-test totals within this specific cohort — it is <strong>not equivalent to a DSM-5 ASD diagnosis</strong>.
+        The high accuracy of the {{ model_name }} reflects the strong mathematical correlation between
+        ADOS subscores (features) and the ADOS-total-derived label. Always consult a qualified clinician.
+      </div>
+
+      <div class="ract">
+        <button class="rbt" onclick="reset()">↺ New Prediction</button>
+        <button class="rbt" onclick="window.print()">🖨️ Print Results</button>
+        <button class="rbt" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">📖 Methodology</button>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<footer>
+  AutiSense &mdash; DREAM 2020 Dataset (SND1156-001-V1.0) &nbsp;·&nbsp;
+  Model: <strong style="color:var(--muted)">{{ model_name }}</strong> ({{ model_acc }}% LOOCV) &nbsp;·&nbsp;
+  Academic / Research use only
+</footer>
+
+<script>
+  let step=0, TOTAL=4, gender="male";
+
+  function pg(b){ document.querySelectorAll('.gbtn').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); gender=b.dataset.v; }
+
+  // Slider update
+  const TAGS=[['None / Normal','t0'],['Mild','t1'],['Moderate','t2'],['Significant/Severe','t3']];
+  function sv(k,val,mx){
+    document.getElementById('nv-'+k).textContent=val;
+    const p=val/mx;
+    const [lbl,cls]=p<=0.15?TAGS[0]:p<=0.40?TAGS[1]:p<=0.70?TAGS[2]:TAGS[3];
+    const st=document.getElementById('st-'+k);
+    st.textContent=lbl; st.className='sv-tag '+cls;
+    const sl=document.getElementById('r'+k);
+    sl.style.background=`linear-gradient(90deg,var(--teal) ${p*100}%,rgba(255,255,255,0.08) ${p*100}%)`;
+  }
+  sv('c',2,8); sv('i',4,14); sv('p',1,5); sv('s',2,8); sv('q',8,39);
+
+  function updateUI(){
+    const p=Math.round(((step+1)/TOTAL)*100);
+    document.getElementById('pf').style.width=p+'%';
+    document.getElementById('slbl').textContent=`Step ${step+1} of ${TOTAL}`;
+    document.getElementById('spct').textContent=p+'%';
+    for(let i=0;i<TOTAL;i++){
+      const d=document.getElementById('d'+i), l=document.getElementById('l'+i);
+      d.classList.remove('on','done');
+      if(i<step){d.classList.add('done');d.textContent='✓';}
+      else if(i===step){d.classList.add('on');d.textContent=i+1;}
+      else d.textContent=i+1;
+      if(l) l.classList.toggle('done',i<step);
+    }
+    document.getElementById('bb').classList.toggle('hidden',step===0);
+    document.getElementById('bn').style.display=step<TOTAL-1?'':'none';
+    document.getElementById('bs').style.display=step===TOTAL-1?'':'none';
+    if(step===TOTAL-1) fillReview();
+  }
+
+  function fillReview(){
+    const c=+document.getElementById('rc').value;
+    const i=+document.getElementById('ri').value;
+    const p=+document.getElementById('rp').value;
+    const s=+document.getElementById('rs').value;
+    const q=+document.getElementById('rq').value;
+    const ay=parseFloat(document.getElementById('ay').value)||5;
+    const am=(ay*12).toFixed(0);
+    const tot=c+i+p+s;
+    document.getElementById('rv-g').textContent=gender==='male'?'0 (male)':'1 (female)';
+    document.getElementById('rv-a').textContent=am+' months';
+    document.getElementById('rv-c').textContent=c;
+    document.getElementById('rv-i').textContent=i;
+    document.getElementById('rv-p').textContent=p;
+    document.getElementById('rv-s').textContent=s;
+    document.getElementById('rv-q').textContent=q;
+    document.getElementById('rv-tot').textContent=tot+' (threshold: {{ threshold|int }})';
+    const w=document.getElementById('rv-warn');
+    if(tot>=parseInt('{{ threshold|int }}')){
+      w.textContent='⚠ Estimated total ('+tot+') ≥ threshold ({{ threshold|int }}) → model will likely predict Higher Severity. The 547 sensor features will be imputed from training medians and may shift this slightly.';
+      w.style.display='';
+    } else {
+      w.textContent='ℹ Estimated total ('+tot+') < threshold ({{ threshold|int }}) → model will likely predict Lower Severity. Imputed sensor features may affect the final probability.';
+      w.style.display='';
+    }
+  }
+
+  function showS(i){ document.querySelectorAll('.fstep').forEach(x=>x.classList.remove('on')); document.getElementById('s'+i).classList.add('on'); }
+  function next(){ if(step<TOTAL-1){step++;showS(step);updateUI();} }
+  function prev(){ if(step>0){step--;showS(step);updateUI();} }
+
+  async function submit(){
+    document.getElementById('bsl').style.display='none';
+    document.getElementById('bsp').style.display='';
+    document.getElementById('bs').disabled=true;
+    const pl={gender,age_years:parseFloat(document.getElementById('ay').value)||5,
+      ados_comm:+document.getElementById('rc').value,
+      ados_interact:+document.getElementById('ri').value,
+      ados_play:+document.getElementById('rp').value,
+      ados_stereo:+document.getElementById('rs').value,
+      ados_scq:+document.getElementById('rq').value};
+    try{
+      const r=await fetch('/predict',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pl)});
+      const d=await r.json();
+      if(d.error){alert('Error: '+d.error);return;}
+      showResult(d,pl);
+    }catch(e){alert('Network error: '+e.message);}
+    finally{document.getElementById('bsl').style.display='';document.getElementById('bsp').style.display='none';document.getElementById('bs').disabled=false;}
+  }
+
+  function showResult(d,pl){
+    const nm=document.getElementById('nm').value.trim()||'Subject';
+    document.getElementById('assessment').style.display='none';
+    const rs=document.getElementById('result');
+    rs.style.display='flex'; rs.scrollIntoView({behavior:'smooth'});
+
+    document.getElementById('rsub').textContent=`${nm} · ${pl.age_years} yrs · ${d.model_name} (${d.model_acc}% LOOCV)`;
+
+    const sv=document.getElementById('rsev');
+    sv.textContent=d.severity; sv.className='rsev '+(d.prediction===1?'shi':'slo');
+
+    const b=document.getElementById('rbdg');
+    b.textContent=d.risk_level+' Risk';
+    b.className='rbadge r'+d.risk_level[0];
+
+    const msgs={Low:'ADOS scores are below the dataset median threshold ('+d.threshold+'). Model predicts Lower severity class.',
+      Moderate:'ADOS scores are near the median threshold. Borderline prediction with moderate confidence.',
+      High:'ADOS scores exceed the dataset median threshold ('+d.threshold+'). Model predicts Higher severity class.'};
+    document.getElementById('rsmry').textContent=msgs[d.risk_level]||'';
+
+    document.getElementById('pl0').textContent=d.prob_lower+'%';
+    document.getElementById('pl1').textContent=d.prob_higher+'%';
+    setTimeout(()=>{document.getElementById('pb0').style.width=d.prob_lower+'%';document.getElementById('pb1').style.width=d.prob_higher+'%';},100);
+
+    const circ=2*Math.PI*45;
+    const df=document.getElementById('df');
+    df.style.strokeDasharray=circ; df.style.strokeDashoffset=circ;
+    df.style.stroke=d.prob_higher>=65?'var(--red)':d.prob_higher>=40?'var(--amber)':'var(--teal)';
+    document.getElementById('dpct').textContent=d.prob_higher+'%';
+    setTimeout(()=>{df.style.strokeDashoffset=circ*(1-d.prob_higher/100);},150);
+
+    // Pipeline trace
+    document.getElementById('pt1').innerHTML=`<strong>Input</strong>: ${Object.keys(pl).length} features provided by user → <code>gender=${pl.gender==='male'?0:1}</code>, <code>age_months=${(pl.age_years*12).toFixed(0)}</code>, <code>ados_pre_comm=${pl.ados_comm}</code>, <code>ados_pre_interact=${pl.ados_interact}</code>, <code>ados_pre_play=${pl.ados_play}</code>, <code>ados_pre_stereo=${pl.ados_stereo}</code>, <code>ados_pre_scq=${pl.ados_scq}</code>`;
+    document.getElementById('pt5').innerHTML=`<strong>${d.model_name}</strong> prediction: <strong>${d.severity}</strong> · P(Lower)=${d.prob_lower}% · P(Higher)=${d.prob_higher}% · Confidence: ${d.confidence}%`;
+
+    // Domain bars
+    const dc=document.getElementById('dcon'); dc.innerHTML='';
+    for(const [dom,pct] of Object.entries(d.domain_pcts)){
+      const col=pct>=65?'var(--red)':pct>=40?'var(--amber)':'var(--teal)';
+      dc.innerHTML+=`<div class="drow"><div class="dmeta"><code>${dom}</code><span style="color:var(--muted)">${pct}%</span></div><div class="dbar"><div class="dfill2" style="width:0%;background:${col}" data-t="${pct}"></div></div></div>`;
+    }
+    setTimeout(()=>{document.querySelectorAll('.dfill2').forEach(e=>e.style.width=e.dataset.t+'%');},200);
+
+    document.getElementById('sbt').innerHTML=`<strong>Estimated ADOS total</strong>: ${d.total_score} &nbsp;|&nbsp; <strong>Median threshold</strong>: ${d.threshold} &nbsp;|&nbsp; <strong>Verdict</strong>: ${d.severity} &nbsp;|&nbsp; <strong>Model confidence</strong>: ${d.confidence}%`;
+  }
+
+  function reset(){
+    step=0;showS(0);updateUI();
+    document.getElementById('assessment').style.display='';
+    document.getElementById('result').style.display='none';
+    const def={c:[2,8],i:[4,14],p:[1,5],s:[2,8],q:[8,39]};
+    for(const [k,[v,mx]] of Object.entries(def)){ document.getElementById('r'+k).value=v; sv(k,v,mx); }
+    document.getElementById('assessment').scrollIntoView({behavior:'smooth'});
+  }
+
+  updateUI();
+</script>
+</body>
+</html>
