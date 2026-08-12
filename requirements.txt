@@ -1,10 +1,9 @@
 flask==3.0.3
 gunicorn==22.0.0
-joblib==1.4.2
-numpy==1.26.4
-pandas==2.2.2
-scikit-learn==1.5.1
-xgboost==2.1.1
-imbalanced-learn==0.12.3
-scipy==1.13.1
-threadpoolctl==3.5.0
+joblib
+numpy
+pandas
+scikit-learn
+xgboost
+imbalanced-learn
+scipy
